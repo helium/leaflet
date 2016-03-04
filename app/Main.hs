@@ -16,10 +16,9 @@ messages = [1..numMessages]
 go :: IO ()
 go = do
     queue <- newTBQueueIO 100 :: IO (TBQueue Int)
-    producer <- async (mapM_ (atomically . writeTBQueue queue) messages)
-    consumer <- async (replicateM_ numMessages (atomically (readTBQueue queue)))
-    wait producer >>= print
-    wait consumer >>= print
+    let producer = async (mapM_ (atomically . writeTBQueue queue) messages)
+        consumer = async (replicateM_ numMessages (atomically (readTBQueue queue)))
+    void (concurrently producer consumer)
 
 main :: IO ()
-main = async go >>= wait >>= print
+main = async go >>= wait
