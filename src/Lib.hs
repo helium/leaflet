@@ -2,24 +2,31 @@
 
 module Lib
     ( Listener(..)
+    , Listen(..)
     , Router(..)
     , newListener
+    , listen
     , newRouter
     , publish
     , subscribe
     ) where
 
 import Control.Concurrent.STM
+import Control.Monad
 import Data.Hashable
 import Data.Unique
 import Data.Maybe (fromMaybe)
-import Data.Set (Set, toList, delete, empty, insert)
+import Data.Set (Set, toList, delete, empty, insert, size)
 import qualified STMContainers.Map as STMMap
 
 data Listener val = Listener
     { _queue :: TBQueue val
+    , _booted :: TMVar ()
     , _uniq  :: Unique
     }
+
+instance Show (Listener val) where
+    show (Listener _ _ u) = "Listener " ++ show (hashUnique u)
 
 instance Eq (Listener val) where
     a == b = _uniq a == _uniq b
@@ -28,7 +35,21 @@ instance Ord (Listener val) where
     compare a b = compare (_uniq a) (_uniq b)
 
 newListener :: Int -> IO (Listener val)
-newListener size = Listener <$> newTBQueueIO size <*> newUnique
+newListener bufSize = Listener
+                        <$> newTBQueueIO bufSize
+                        <*> newEmptyTMVarIO
+                        <*> newUnique
+
+data Listen val
+    = Received val
+    | Booted
+    deriving (Show)
+
+listen :: Listener val -> STM (Listen val)
+listen Listener{..} =
+    (Received <$> readTBQueue _queue)
+        `orElse`
+    (takeTMVar _booted >> pure Booted)
 
 data PushListenerResult = PushSuccess | PushFull
     deriving (Show, Eq)
@@ -60,11 +81,12 @@ publish (Router router) topic val = do
                 needsRemoving = fst <$> filter (\(_,r) -> r == PushFull) resultWithListener
                 deleted = foldr delete listeners needsRemoving
             STMMap.insert deleted topic router
+            mapM_ (flip putTMVar () . _booted) needsRemoving
         Nothing ->
             return ()
 
 subscribe
-    :: (Eq topic, Hashable topic)
+    :: (Show topic, Eq topic, Hashable topic)
     => Router topic val
     -> topic
     -> Listener val

@@ -31,6 +31,8 @@ executable leaflet-exe
                      , async
                      , leaflet
                      , stm
+                     , random
+                     , split
   default-language:    Haskell2010
 
 test-suite leaflet-test
