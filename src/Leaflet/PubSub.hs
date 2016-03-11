@@ -1,6 +1,6 @@
-{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE RecordWildCards #-}
 
-module Lib
+module Leaflet.PubSub
     ( Listener(..)
     , Listen(..)
     , Router(..)
@@ -11,18 +11,19 @@ module Lib
     , subscribe
     ) where
 
-import Control.Concurrent.STM
-import Control.Monad
-import Data.Hashable
-import Data.Unique
-import Data.Maybe (fromMaybe)
-import Data.Set (Set, toList, delete, empty, insert, size)
-import qualified STMContainers.Map as STMMap
+import           Control.Concurrent.STM
+import           Control.Monad
+import           Data.Hashable
+import           Data.Maybe             (fromMaybe)
+import           Data.Set               (Set, delete, empty, insert, size,
+                                         toList)
+import           Data.Unique
+import qualified STMContainers.Map      as STMMap
 
 data Listener val = Listener
-    { _queue :: TBQueue val
+    { _queue  :: TBQueue val
     , _booted :: TMVar ()
-    , _uniq  :: Unique
+    , _uniq   :: Unique
     }
 
 instance Show (Listener val) where
@@ -67,7 +68,7 @@ newRouter :: IO (Router topic val)
 newRouter = Router <$> STMMap.newIO
 
 publish
-    :: (Eq topic, Hashable topic)
+    :: STMMap.Key topic
     => Router topic val
     -> topic
     -> val
@@ -86,7 +87,7 @@ publish (Router router) topic val = do
             return ()
 
 subscribe
-    :: (Show topic, Eq topic, Hashable topic)
+    :: (Show topic, STMMap.Key topic)
     => Router topic val
     -> topic
     -> Listener val
