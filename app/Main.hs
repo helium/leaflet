@@ -1,14 +1,14 @@
 module Main where
 
-import Lib
+import           Leaflet.PubSub
 
-import Control.Monad
-import Control.Concurrent
-import Control.Concurrent.Async
-import Control.Concurrent.MVar
-import Control.Concurrent.STM
-import Data.List.Split
-import Data.Word
+import           Control.Concurrent
+import           Control.Concurrent.Async
+import           Control.Concurrent.MVar
+import           Control.Concurrent.STM
+import           Control.Monad
+import           Data.List.Split
+import           Data.Word
 
 numMessages :: Int
 numMessages = 1000 * 1000
