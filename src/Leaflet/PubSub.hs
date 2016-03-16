@@ -9,6 +9,7 @@ module Leaflet.PubSub
     , newRouter
     , publish
     , subscribe
+    , unsubscribe
     ) where
 
 import           Control.Concurrent.STM
@@ -95,4 +96,15 @@ subscribe
 subscribe (Router router) topic newListener = do
     listeners <- fromMaybe empty <$> STMMap.lookup topic router
     let newListeners = insert newListener listeners
+    STMMap.insert newListeners topic router
+
+unsubscribe
+    :: (Show topic, STMMap.Key topic)
+    => Router topic val
+    -> topic
+    -> Listener val
+    -> STM ()
+unsubscribe (Router router) topic listener = do
+    listeners <- fromMaybe empty <$> STMMap.lookup topic router
+    let newListeners = delete listener listeners
     STMMap.insert newListeners topic router
